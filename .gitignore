@@ -1,0 +1,13 @@
+# The upstream checkout. Cloned by setup.sh, pinned by MARVEEN_REF in .env.
+# NEVER commit it: once configured it holds .env (bot token, Claude OAuth
+# token), store/ (the fleet DB and .claude-oauth-token) and agents/.
+/marveen/
+
+# Container $HOME and /tmp. Holds ~/.claude credentials and the channel
+# plugin's own .env.
+/data/
+
+# Local configuration, derived from .env.example by setup.sh.
+/.env
+
+*.log

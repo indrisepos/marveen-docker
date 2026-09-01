@@ -1,0 +1,91 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check the shell scripts
+        run: |
+          for f in setup.sh entrypoint.sh ollama-shim.sh; do
+            bash -n "$f" && echo "ok: $f"
+          done
+      - uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          severity: warning
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Both stacks must resolve
+        run: |
+          cp .env.example .env
+          # The checkout does not exist in CI; compose only needs the path to
+          # be resolvable, so a placeholder is enough to validate the files.
+          mkdir -p marveen data/home data/tmp
+          docker compose -f docker-compose.yml config -q
+          docker compose -f docker-compose.host-ollama.yml config -q
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: docker build -t marveen:ci .
+
+      # This job exists for one specific class of bug. Debian's /etc/profile
+      # RESETS PATH for non-root login shells, silently discarding everything
+      # the Dockerfile's ENV adds. It matters because channels.sh drives the
+      # agents through tmux, and tmux starts LOGIN shells -- so a broken PATH
+      # here does not fail the build, it makes the fleet lose whisper and Go at
+      # runtime, with no error anywhere. Assert against a login shell, because
+      # that is what actually runs the agents.
+      - name: Every tool must resolve in a LOGIN shell
+        run: |
+          docker run --rm --entrypoint bash marveen:ci -lc '
+            set -e
+            fail=0
+            for t in node npm bun claude go tmux ffmpeg git jq sqlite3 python3 pipx lsof zstd unzip bc ssh-keygen; do
+              if p=$(command -v "$t"); then
+                printf "  %-11s %s\n" "$t" "$p"
+              else
+                printf "  %-11s MISSING\n" "$t"; fail=1
+              fi
+            done
+            exit $fail
+          '
+
+      - name: Node must satisfy the engines range (>=20 <24)
+        run: |
+          v=$(docker run --rm --entrypoint node marveen:ci -e 'process.stdout.write(process.versions.node.split(".")[0])')
+          echo "node major: $v"
+          [ "$v" -ge 20 ] && [ "$v" -lt 24 ]
+
+      - name: sudo must NOT be present
+        run: |
+          # Its mere presence sends ensure-managed-channels-enabled.sh down a
+          # branch that prompts for a password the container user does not have.
+          if docker run --rm --entrypoint bash marveen:ci -lc 'command -v sudo'; then
+            echo "sudo is present in the image; see the Dockerfile comment" >&2
+            exit 1
+          fi
+
+      - name: Managed settings must enable channels
+        run: |
+          docker run --rm --entrypoint cat marveen:ci /etc/claude-code/managed-settings.json \
+            | python3 -c 'import sys,json; assert json.load(sys.stdin)["channelsEnabled"] is True'
+
+      - name: The ollama shim must be on PATH and report a clear error with no daemon
+        run: |
+          out=$(docker run --rm --entrypoint bash marveen:ci -lc 'ollama list' 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q 'no daemon answering'

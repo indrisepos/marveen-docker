@@ -1,0 +1,40 @@
+# Shared service definition. NOT a runnable stack on its own -- both
+# docker-compose.yml (bundled Ollama) and docker-compose.host-ollama.yml
+# extend this, so the parts that must not drift live here once.
+services:
+  marveen-common:
+    build:
+      context: .
+      args:
+        CLAUDE_VERSION: ${CLAUDE_VERSION:-2.1.110}
+        GO_VERSION: ${GO_VERSION:-1.25.1}
+    image: marveen:local
+
+    # Must match the owner of ./marveen and ./data, or the container writes
+    # files the host user cannot edit. setup.sh fills these from `id`.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+
+    # tini as PID 1: the agents spawn claude processes under tmux, and orphans
+    # need reaping.
+    init: true
+
+    volumes:
+      # The upstream checkout. The installer and the running app write ALL of
+      # their state inside it (.env, store/, agents/, dist/, node_modules,
+      # CLAUDE.md, SOUL.md) -- every one of those is gitignored upstream, so
+      # the checkout stays pullable and `update.sh` keeps working.
+      - ./marveen:/opt/marveen
+      # $HOME must persist too: the Claude credentials and the channel plugin
+      # live in ~/.claude (the units point TELEGRAM_ENV at
+      # $HOME/.claude/channels/telegram/.env).
+      - ./data/home:/home/node
+      # Agents keep scratch state here; a tmpfs would lose it on restart.
+      - ./data/tmp:/tmp
+
+    environment:
+      TZ: ${TZ:-UTC}
+      LANG: ${LANG:-en_US.UTF-8}
+      WEB_PORT: ${WEB_PORT:-3420}
+
+    restart: unless-stopped
+    stop_grace_period: 30s

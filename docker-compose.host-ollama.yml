@@ -1,0 +1,31 @@
+# Alternative stack: reuse an Ollama already running on the host.
+#
+#   docker compose -f docker-compose.host-ollama.yml up -d
+#
+# WHY network_mode: host rather than a bridge plus host-gateway.
+#
+# Ollama binds 127.0.0.1:11434 by default. A bridge container cannot reach a
+# loopback-bound daemon through host-gateway, and the alternative -- telling the
+# host daemon to listen on a wider interface -- would expose it to every
+# container on the box. Sharing the host netns keeps that daemon untouched.
+#
+# It also matters that Marveen's installer hardcodes http://localhost:11434 for
+# its model pull (it does NOT read OLLAMA_URL there), so "localhost" has to
+# genuinely be the host for the wizard to work end to end.
+#
+# TRADE-OFF, read it: this container gets NO network isolation. It can reach
+# every service listening on the host, including ones bound to loopback. Use
+# the default docker-compose.yml unless you specifically want the host's
+# models and GPU.
+services:
+  marveen:
+    extends:
+      file: common.yml
+      service: marveen-common
+    container_name: marveen
+    network_mode: host
+    environment:
+      # Explicit, though it is also the default: while sharing the host network
+      # namespace the dashboard must NOT bind 0.0.0.0.
+      WEB_HOST: 127.0.0.1
+      OLLAMA_URL: http://localhost:11434

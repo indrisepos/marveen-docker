@@ -1,0 +1,52 @@
+# Default stack: self-contained, with its own Ollama.
+#
+# Bridge networking, nothing on the host's network namespace, dashboard
+# published on loopback only. This is the profile to use unless you already run
+# Ollama on the host and want to share its models and GPU -- for that, see
+# docker-compose.host-ollama.yml.
+services:
+  marveen:
+    extends:
+      file: common.yml
+      service: marveen-common
+    container_name: marveen
+    environment:
+      # Bind inside the container so the published port reaches it. The port is
+      # published to 127.0.0.1 below, so this does not expose the dashboard --
+      # whose auth is a bearer token in the URL -- beyond this machine.
+      WEB_HOST: 0.0.0.0
+      # The RUNTIME reads OLLAMA_URL (src/config.ts). Marveen's INSTALLER does
+      # not -- it hardcodes localhost:11434 -- so the wizard's model pull will
+      # warn and skip here. setup.sh pulls nomic-embed-text into the ollama
+      # service directly instead. Non-fatal either way.
+      OLLAMA_URL: http://ollama:11434
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3420}:${WEB_PORT:-3420}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: marveen-ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    # CPU by default. For an NVIDIA GPU install the nvidia-container-toolkit on
+    # the host and uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  ollama-models:
