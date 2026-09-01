@@ -108,6 +108,18 @@ RUN printf '%s\n' \
     > /etc/profile.d/10-marveen-path.sh \
     && chmod 0644 /etc/profile.d/10-marveen-path.sh
 
+# Drop Debian's ~/.bash_logout.
+#
+# It runs `clear_console -q` when a LOGIN shell exits. With no TTY -- which is
+# every shell in this container -- that command fails, and its status REPLACES
+# the shell's own: `bash -lc 'exit 0'` returns 1. Measured in this image.
+#
+# That is not cosmetic. channels.sh drives the agents through tmux, and tmux
+# starts login shells, so anything that reads the exit status of one gets a
+# fabricated failure. Clearing a physical console for privacy is meaningless in
+# a container; corrupting exit codes is not.
+RUN rm -f /home/node/.bash_logout /etc/skel/.bash_logout
+
 # uid/gid 1000 already exists in the node image as `node`. Compose overrides the
 # runtime user to match whoever owns the bind mounts.
 ENV HOME=/home/node \

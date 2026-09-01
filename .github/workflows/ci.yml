@@ -51,18 +51,25 @@ jobs:
       # that is what actually runs the agents.
       - name: Every tool must resolve in a LOGIN shell
         run: |
-          docker run --rm --entrypoint bash marveen:ci -lc '
-            set -e
-            fail=0
+          # The verdict travels in stdout, not in the exit status. A login
+          # shell's status is not trustworthy on a stock Debian base: ~/.bash_logout
+          # runs `clear_console` on exit, which fails without a TTY and replaces
+          # the script's own status. The image removes that file, and asserting
+          # on a sentinel keeps this check honest even if it ever comes back.
+          out=$(docker run --rm --entrypoint bash marveen:ci -lc '
             for t in node npm bun claude go tmux ffmpeg git jq sqlite3 python3 pipx lsof zstd unzip bc ssh-keygen; do
               if p=$(command -v "$t"); then
                 printf "  %-11s %s\n" "$t" "$p"
               else
-                printf "  %-11s MISSING\n" "$t"; fail=1
+                printf "  %-11s MISSING\n" "$t"
               fi
             done
-            exit $fail
-          '
+            echo TOOLCHECK_DONE
+          ')
+          echo "$out"
+          echo "$out" | grep -q TOOLCHECK_DONE || { echo "the check did not run to completion" >&2; exit 1; }
+          echo "$out" | grep -q MISSING && { echo "a tool is missing from the login-shell PATH" >&2; exit 1; }
+          exit 0
 
       - name: Node must satisfy the engines range (>=20 <24)
         run: |

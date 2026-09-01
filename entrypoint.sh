@@ -18,7 +18,7 @@
 set -uo pipefail
 
 APP=/opt/marveen
-cd "$APP"
+cd "$APP" || { echo "[entrypoint] $APP is not mounted" >&2; exit 1; }
 
 log() { echo "[entrypoint] $*"; }
 
