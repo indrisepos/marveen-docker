@@ -63,11 +63,18 @@ Restarting the live stack is safe and quick; state is all in bind mounts.
 
 ## Upstream
 
-Three fixes from this work went to `Szotasz/marveen`:
-[#1143](https://github.com/Szotasz/marveen/pull/1143) (`OLLAMA_URL`) is **merged**
-into `develop`; [#1141](https://github.com/Szotasz/marveen/pull/1141) (pairing
-without systemd) and [#1142](https://github.com/Szotasz/marveen/pull/1142)
-(channels gate) are still open.
+Three fixes from this work went to `Szotasz/marveen`, all against `develop`:
+[#1141](https://github.com/Szotasz/marveen/pull/1141) (pairing without systemd)
+and [#1143](https://github.com/Szotasz/marveen/pull/1143) (`OLLAMA_URL`) are
+**merged**; [#1142](https://github.com/Szotasz/marveen/pull/1142) (channels
+gate) is open, approved-in-principle pending one test fix.
+
+The maintainer reviews by **re-running the tests against the pre-fix script
+himself**, and by mutating the fix to check the test actually fails. A test that
+asserts only the script's report passes that mutation and gets sent back: on
+#1142 the `preserves other managed keys` test stayed green with the merge
+replaced by `d = {}`. Assert the *effect* (the file it wrote), not the summary
+line.
 
 Upstream wants PRs against `develop`, on a descriptively named branch, with the
 template filled in. Its installer tests slice the **real** shipped script and
