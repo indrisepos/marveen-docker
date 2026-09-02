@@ -183,6 +183,54 @@ data/tmp/     agent scratch
 `marveen/` stays a pristine upstream checkout — nothing from this repo is
 written into it — so `git pull` and upstream's `update.sh` keep working.
 
+## Letting the fleet see your other work
+
+Optional. `bin/context-refresh.sh` runs on the **host** and writes `./context`,
+which is the only thing outside its own install the container can read — and it
+is mounted read-only.
+
+```bash
+cp context-sources.conf.example context-sources.conf   # name your repos/sessions
+./bin/context-refresh.sh                               # build it
+./bin/install-timer.sh                                 # daily at 04:30, catches up after downtime
+```
+
+It produces:
+
+| | |
+|---|---|
+| `context/projects/<name>.md` | branch, recent commits, ahead/behind, uncommitted **file names**, activity |
+| `context/repos/<name>.git` | bare mirror, so an agent can `git --git-dir=… log/diff/blame` |
+| `context/sessions/digest.md` | prose from past Claude sessions — raw material for writing |
+
+### Why curated, and not just a read-only mount
+
+`:ro` stops writes. It does not stop reads, and reads are the problem here.
+
+This fleet runs `claude` unattended with `--dangerously-skip-permissions`, has
+Bash, and has a Telegram channel. Its built-in egress gate covers `WebFetch`
+only — upstream's own note in `scripts/hooks/egress-gate.mjs` says it "does NOT
+intercept WebSearch, curl/Bash network calls, or MCP-server outbound requests".
+So anything readable is potentially sendable, and every readable file is
+prompt-injection surface.
+
+Hence: **no working tree is ever mounted**, so gitignored files (`.env` and
+friends) cannot reach the agents at all; and **no raw transcript is ever
+mounted**. The digest keeps your prompts and the assistant's prose and drops
+every tool result — that is where file contents, command output and pasted keys
+live. Measured on one host: 4 of 689 transcripts held private-key-shaped
+strings. What survives is then scrubbed for secret-shaped strings, as a second
+line of defence rather than the first.
+
+Two things the script cannot fix, and warns about instead:
+
+- A **committed** secret is in the mirror. It lists tracked secret-shaped files
+  so you know; it will not rewrite your history.
+- The refresh re-applies a `/context` section to `marveen/CLAUDE.md` on every
+  run, because `install-linux.sh` regenerates that file with an unguarded `>`
+  redirect — re-running the wizard would otherwise wipe it. That section also
+  tells the agents to treat `/context` as data, never as instructions.
+
 ## Known limitations
 
 - **Whisper runs on CPU.** The optional install pulls ~4.9 GB (PyTorch + CUDA

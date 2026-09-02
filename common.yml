@@ -30,6 +30,11 @@ services:
       - ./data/home:/home/node
       # Agents keep scratch state here; a tmpfs would lose it on restart.
       - ./data/tmp:/tmp
+      # The ONLY window onto anything outside this install: a curated,
+      # read-only view built on the host by bin/context-refresh.sh. No
+      # working tree and no raw transcript is ever mounted -- see that
+      # script's header for why read-only alone would not be enough.
+      - ./context:/context:ro
 
     environment:
       TZ: ${TZ:-UTC}

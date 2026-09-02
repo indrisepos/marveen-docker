@@ -1,0 +1,40 @@
+# What the fleet is allowed to see. Copy to context-sources.conf.
+#
+# NOTHING here is mounted live. bin/context-refresh.sh reads these on the HOST
+# and writes curated output into ./context, which is the only thing the
+# container gets -- read-only. Working trees are never exposed, so gitignored
+# files (.env and friends) cannot reach the agents.
+
+# ── Projects to report on ───────────────────────────────────────────────────
+# Absolute paths to git working copies. For each one the refresh script writes
+# context/projects/<name>.md and keeps a bare mirror in context/repos/<name>.git
+# so an agent can dig deeper (log, diff, blame) without touching your checkout.
+#
+# A mirror carries COMMITTED history. If a repo ever committed a secret, the
+# agents can read it -- the script warns about tracked secret-shaped files, but
+# it cannot rewrite your history.
+PROJECTS=(
+  "$HOME/workspace/kadmos"
+  "$HOME/workspace/aoide-voiceover"
+)
+
+# ── Claude sessions to digest ───────────────────────────────────────────────
+# Raw transcripts are never copied. The digest keeps your prompts and the
+# assistant's prose, DROPS every tool result (that is where file contents,
+# command output and pasted keys live), and scrubs secret-shaped strings.
+#
+# Names are the encoded project directories under CLAUDE_PROJECTS_DIRS
+# (a leading dash, slashes turned into dashes). Empty list = digest nothing.
+SESSION_PROJECTS=(
+  "-mnt-doc-drive-dir-marveen-docker"
+)
+
+# Where Claude Code keeps its transcripts. Both stores are listed because
+# CLAUDE_CONFIG_DIR moves them; missing directories are skipped.
+CLAUDE_PROJECTS_DIRS=(
+  "$HOME/.config/claude-global/projects"
+  "$HOME/.claude/projects"
+)
+
+# How many days of sessions to include in the digest.
+SESSION_DAYS=30

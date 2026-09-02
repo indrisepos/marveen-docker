@@ -63,12 +63,20 @@ Restarting the live stack is safe and quick; state is all in bind mounts.
 
 ## Upstream
 
-Three fixes from this work are open against `Szotasz/marveen`:
-[#1141](https://github.com/Szotasz/marveen/pull/1141) (pairing without systemd),
-[#1142](https://github.com/Szotasz/marveen/pull/1142) (channels gate),
-[#1143](https://github.com/Szotasz/marveen/pull/1143) (`OLLAMA_URL`).
+Three fixes from this work went to `Szotasz/marveen`:
+[#1143](https://github.com/Szotasz/marveen/pull/1143) (`OLLAMA_URL`) is **merged**
+into `develop`; [#1141](https://github.com/Szotasz/marveen/pull/1141) (pairing
+without systemd) and [#1142](https://github.com/Szotasz/marveen/pull/1142)
+(channels gate) are still open.
 
 Upstream wants PRs against `develop`, on a descriptively named branch, with the
 template filled in. Its installer tests slice the **real** shipped script and
 drive it with stubs — match that style, and anchor the slice so the test also
 runs against the pre-fix script, or it proves nothing.
+
+`install-macos.sh:1063` still hardcodes `http://localhost:11434` in its
+start-if-not-running check — the same bug #1143 fixed on Linux. The maintainer
+has carded it as theirs and asked us **not** to send a PR for it.
+
+Workflow runs on a first-time contributor's PR sit until a maintainer approves
+them; nothing surfaces that, so a silent PR is not necessarily a stalled one.

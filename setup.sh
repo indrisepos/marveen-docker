@@ -69,7 +69,7 @@ set -a; . ./.env; set +a
 # ── 3. Upstream checkout ────────────────────────────────────────────────────
 echo ""
 echo "${BOLD}[3/6] Marveen checkout${NC}"
-mkdir -p data/home data/tmp
+mkdir -p data/home data/tmp context
 if [ -d marveen/.git ]; then
   ok "./marveen already present ($(git -C marveen describe --tags --always 2>/dev/null || echo unknown))"
   echo "  ${DIM}to update later: docker compose -f ${COMPOSE_FILE} run --rm marveen update${NC}"
