@@ -63,11 +63,11 @@ Restarting the live stack is safe and quick; state is all in bind mounts.
 
 ## Upstream
 
-Three fixes from this work went to `Szotasz/marveen`, all against `develop`:
-[#1141](https://github.com/Szotasz/marveen/pull/1141) (pairing without systemd)
-and [#1143](https://github.com/Szotasz/marveen/pull/1143) (`OLLAMA_URL`) are
-**merged**; [#1142](https://github.com/Szotasz/marveen/pull/1142) (channels
-gate) is open, approved-in-principle pending one test fix.
+Three fixes from this work went to `Szotasz/marveen`, all against `develop`,
+all **merged**: [#1141](https://github.com/Szotasz/marveen/pull/1141) (pairing
+without systemd), [#1142](https://github.com/Szotasz/marveen/pull/1142)
+(channels gate) and [#1143](https://github.com/Szotasz/marveen/pull/1143)
+(`OLLAMA_URL`).
 
 The maintainer reviews by **re-running the tests against the pre-fix script
 himself**, and by mutating the fix to check the test actually fails. A test that
